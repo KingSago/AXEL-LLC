@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axel's Trusted LLC — Handyman Services</title>
+  <meta name="description" content="Axel's Trusted LLC — reliable handyman services in Southwest Florida. Landscaping, flooring, blinds, drywall, and painting for homeowners in Fort Myers, Naples, Cape Coral &amp; Sarasota. Licensed &amp; insured. Free estimates." />
+
+  <!-- Local Business Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HomeAndConstructionBusiness",
+    "name": "Axel's Trusted LLC",
+    "description": "Reliable handyman services: landscaping, flooring, blinds, drywall repair, and interior/exterior painting.",
+    "telephone": "+19414049777",
+    "email": "axelsllc22@gmail.com",
+    "areaServed": "Southwest Florida",
+    "priceRange": "$$",
+    "openingHours": "Mo-Fr 08:00-18:00",
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Handyman Services",
+      "itemListElement": [
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Landscaping & Lawn Care"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Flooring Installation"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Blinds Installation"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Drywall Repair & Replacement"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "Interior & Exterior Painting"}},
+        {"@type": "Offer", "itemOffered": {"@type": "Service", "name": "General Handyman Services"}}
+      ]
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;500&family=Lora:ital@0;1&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- =============================================
+       NAVIGATION
+  ============================================= -->
+  <header>
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+      <div class="nav__inner">
+        <a href="#hero" class="nav__logo" aria-label="Axel's Trusted LLC — Home">
+          <img src="LOGO.png" alt="Axel's Trusted LLC logo" />
+          <span class="nav__logo-name">Axel's<br>Trusted LLC</span>
+        </a>
+
+        <ul class="nav__links" role="list">
+          <li><a href="#services">Services</a></li>
+          <li><a href="#work">Our Work</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+
+        <div class="nav__cta">
+          <a href="tel:+19414049777" class="nav__phone" aria-label="Call us">
+            (941) 404-9777
+          </a>
+          <a href="#contact" class="btn btn-primary">Get a Quote</a>
+        </div>
+
+        <button class="nav__burger" id="burger" aria-label="Open menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+
+      <div class="nav__mobile-menu" id="mobileMenu" role="menu">
+        <a href="#services" role="menuitem">Services</a>
+        <a href="#work" role="menuitem">Our Work</a>
+        <a href="#about" role="menuitem">About</a>
+        <a href="#contact" role="menuitem">Contact</a>
+        <a href="tel:+19414049777" role="menuitem">Call (941) 404-9777</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- =============================================
+         HERO
+    ============================================= -->
+    <section class="hero" id="hero" aria-label="Hero">
+      <div class="hero__overlay" aria-hidden="true"></div>
+
+      <!-- Watermark badge -->
+      <img class="hero__badge" src="LOGO.png" alt="" aria-hidden="true" />
+
+      <div class="hero__content container">
+        <p class="hero__eyebrow">Licensed &amp; Insured · Free Estimates</p>
+
+        <h1 class="hero__headline">
+          Your Home,<br>
+          <span>Done Right.</span>
+        </h1>
+
+        <p class="hero__sub">
+          Reliable handyman services for homeowners who need the job done
+          right — from landscaping and flooring to drywall and painting.
+          No runaround. No surprises. Just honest work.
+        </p>
+
+        <div class="hero__ctas">
+          <a href="#contact" class="btn btn-primary">Get a Free Quote</a>
+          <a href="tel:+19414049777" class="btn btn-outline">Call Now</a>
+        </div>
+
+        <ul class="hero__trust" role="list" aria-label="Trust indicators">
+          <li class="hero__trust-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 1L10.09 5.26L15 6L11.5 9.4L12.18 14.27L8 12.1L3.82 14.27L4.5 9.4L1 6L5.91 5.26L8 1Z"/>
+            </svg>
+            Licensed
+          </li>
+          <li class="hero__trust-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 1L10.09 5.26L15 6L11.5 9.4L12.18 14.27L8 12.1L3.82 14.27L4.5 9.4L1 6L5.91 5.26L8 1Z"/>
+            </svg>
+            Insured
+          </li>
+          <li class="hero__trust-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 1L10.09 5.26L15 6L11.5 9.4L12.18 14.27L8 12.1L3.82 14.27L4.5 9.4L1 6L5.91 5.26L8 1Z"/>
+            </svg>
+            Local &amp; Family-Run
+          </li>
+          <li class="hero__trust-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 1L10.09 5.26L15 6L11.5 9.4L12.18 14.27L8 12.1L3.82 14.27L4.5 9.4L1 6L5.91 5.26L8 1Z"/>
+            </svg>
+            Free Estimates
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- =============================================
+         SERVICES
+    ============================================= -->
+    <section class="services" id="services" aria-labelledby="services-title">
+      <div class="container">
+        <div class="services__header">
+          <h2 class="section-label" id="services-title">What We Do</h2>
+          <p class="services__intro">
+            From curb appeal to interior updates, we handle the work so you don't have to.
+          </p>
+        </div>
+
+        <div class="services__grid">
+
+          <!-- Landscaping -->
+          <article class="service-card">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M24 40V22"/>
+                <path d="M24 22C24 22 14 18 14 10C14 10 18 6 24 6C30 6 34 10 34 10C34 18 24 22 24 22Z"/>
+                <path d="M16 40h16"/>
+                <path d="M10 30C10 30 14 26 20 28"/>
+                <path d="M38 30C38 30 34 26 28 28"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title">Landscaping &amp; Lawn Care</h3>
+            <p class="service-card__desc">Mowing, trimming, cleanups, and seasonal yard work to keep your property looking its best year-round.</p>
+          </article>
+
+          <!-- Flooring -->
+          <article class="service-card">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="6" width="16" height="16" rx="1"/>
+                <rect x="26" y="6" width="16" height="16" rx="1"/>
+                <rect x="6" y="26" width="16" height="16" rx="1"/>
+                <rect x="26" y="26" width="16" height="16" rx="1"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title">Flooring Installation</h3>
+            <p class="service-card__desc">Hardwood, laminate, vinyl, and tile installation with clean, precise cuts and a lasting finish.</p>
+          </article>
+
+          <!-- Blinds -->
+          <article class="service-card">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="8" y="8" width="32" height="4" rx="1"/>
+                <line x1="8" y1="18" x2="40" y2="18"/>
+                <line x1="8" y1="25" x2="40" y2="25"/>
+                <line x1="8" y1="32" x2="40" y2="32"/>
+                <line x1="8" y1="39" x2="40" y2="39"/>
+                <line x1="26" y1="12" x2="26" y2="44"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title">Blinds Installation</h3>
+            <p class="service-card__desc">Accurate, level installation of window blinds, shades, and shutters — any window, any style.</p>
+          </article>
+
+          <!-- Drywall -->
+          <article class="service-card">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="6" y="6" width="36" height="36" rx="2"/>
+                <path d="M6 18h36"/>
+                <path d="M18 6v36"/>
+                <path d="M14 30l6-6 4 4 8-10"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title">Drywall Repair &amp; Replacement</h3>
+            <p class="service-card__desc">Holes, cracks, water damage, or full sheet replacement — seamlessly matched and smooth.</p>
+          </article>
+
+          <!-- Painting -->
+          <article class="service-card">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 8l4 4-18 18 4 4 18-18 4 4 6-16-18 6z" transform="translate(4,0)"/>
+                <path d="M32 32c0 0-2 6 2 8s8-2 8-2" transform="translate(-4,0)"/>
+                <path d="M6 42h14"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title">Interior &amp; Exterior Painting</h3>
+            <p class="service-card__desc">Clean prep, even coats, crisp lines — walls, ceilings, trim, siding, and more.</p>
+          </article>
+
+          <!-- General Handyman -->
+          <article class="service-card">
+            <div class="service-card__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M34 8l-4 4 6 6 4-4a6 6 0 00-6-6z"/>
+                <path d="M30 12L14 28l-6 12 12-6L36 18"/>
+                <circle cx="12" cy="36" r="2"/>
+              </svg>
+            </div>
+            <h3 class="service-card__title">General Handyman Services</h3>
+            <p class="service-card__desc">Furniture assembly, door repairs, fixture installs, caulking — if something needs fixing, we can handle it.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================
+         BEFORE & AFTER
+    ============================================= -->
+    <section class="before-after" id="work" aria-labelledby="work-title">
+      <div class="container">
+        <div class="before-after__header">
+          <h2 class="section-label" id="work-title">See the Difference</h2>
+          <p class="before-after__intro">
+            Don't just take our word for it — see the results for yourself.
+            Drag the slider to compare before and after on real jobs we've done
+            for homeowners in your area.
+          </p>
+        </div>
+
+        <div class="slider-grid">
+
+          <!-- Slider 1: Drywall -->
+          <div>
+            <p class="slider-wrap__label">Drywall Repair</p>
+            <div class="slider-wrap" data-slider aria-label="Before and after drywall repair">
+              <!-- REPLACE: add real before/after images -->
+              <!-- <img class="slider-wrap__before" src="assets/photos/drywall-before.jpg" alt="Drywall before repair"> -->
+              <!-- <img class="slider-wrap__after"  src="assets/photos/drywall-after.jpg"  alt="Drywall after repair"> -->
+              <div class="photo-placeholder">
+                <svg class="photo-placeholder__icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="10" width="36" height="28" rx="2"/><circle cx="18" cy="20" r="4"/><path d="M6 32l10-8 8 6 6-5 12 9"/></svg>
+                <p class="photo-placeholder__text">Before Photo<br>Replace with real image</p>
+              </div>
+              <div class="slider-wrap__divider" aria-hidden="true"></div>
+              <div class="slider-wrap__handle" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M6 9H2M2 9L4 7M2 9L4 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M12 9H16M16 9L14 7M16 9L14 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="slider-wrap__badge-before" aria-hidden="true">Before</span>
+              <span class="slider-wrap__badge-after"  aria-hidden="true">After</span>
+            </div>
+          </div>
+
+          <!-- Slider 2: Painting -->
+          <div>
+            <p class="slider-wrap__label">Interior Painting</p>
+            <div class="slider-wrap" data-slider aria-label="Before and after interior painting">
+              <!-- REPLACE: add real before/after images -->
+              <div class="photo-placeholder">
+                <svg class="photo-placeholder__icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="10" width="36" height="28" rx="2"/><circle cx="18" cy="20" r="4"/><path d="M6 32l10-8 8 6 6-5 12 9"/></svg>
+                <p class="photo-placeholder__text">Before Photo<br>Replace with real image</p>
+              </div>
+              <div class="slider-wrap__divider" aria-hidden="true"></div>
+              <div class="slider-wrap__handle" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M6 9H2M2 9L4 7M2 9L4 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M12 9H16M16 9L14 7M16 9L14 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="slider-wrap__badge-before" aria-hidden="true">Before</span>
+              <span class="slider-wrap__badge-after"  aria-hidden="true">After</span>
+            </div>
+          </div>
+
+          <!-- Slider 3: Flooring -->
+          <div>
+            <p class="slider-wrap__label">Flooring Installation</p>
+            <div class="slider-wrap" data-slider aria-label="Before and after flooring installation">
+              <div class="photo-placeholder">
+                <svg class="photo-placeholder__icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="10" width="36" height="28" rx="2"/><circle cx="18" cy="20" r="4"/><path d="M6 32l10-8 8 6 6-5 12 9"/></svg>
+                <p class="photo-placeholder__text">Before Photo<br>Replace with real image</p>
+              </div>
+              <div class="slider-wrap__divider" aria-hidden="true"></div>
+              <div class="slider-wrap__handle" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M6 9H2M2 9L4 7M2 9L4 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M12 9H16M16 9L14 7M16 9L14 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="slider-wrap__badge-before" aria-hidden="true">Before</span>
+              <span class="slider-wrap__badge-after"  aria-hidden="true">After</span>
+            </div>
+          </div>
+
+          <!-- Slider 4: Landscaping -->
+          <div>
+            <p class="slider-wrap__label">Landscaping</p>
+            <div class="slider-wrap" data-slider aria-label="Before and after landscaping">
+              <div class="photo-placeholder">
+                <svg class="photo-placeholder__icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="6" y="10" width="36" height="28" rx="2"/><circle cx="18" cy="20" r="4"/><path d="M6 32l10-8 8 6 6-5 12 9"/></svg>
+                <p class="photo-placeholder__text">Before Photo<br>Replace with real image</p>
+              </div>
+              <div class="slider-wrap__divider" aria-hidden="true"></div>
+              <div class="slider-wrap__handle" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M6 9H2M2 9L4 7M2 9L4 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M12 9H16M16 9L14 7M16 9L14 11" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="slider-wrap__badge-before" aria-hidden="true">Before</span>
+              <span class="slider-wrap__badge-after"  aria-hidden="true">After</span>
+            </div>
+          </div>
+
+        </div>
+
+        <a href="#contact" class="before-after__link">
+          Request a quote for your project
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 8h10M9 4l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </section>
+
+    <!-- =============================================
+         MEET AXEL
+    ============================================= -->
+    <section class="meet-axel" id="about" aria-labelledby="about-title">
+      <div class="container meet-axel__inner">
+
+        <div class="meet-axel__photo-wrap">
+          <!-- REPLACE: add Axel's portrait photo -->
+          <!-- <img class="meet-axel__photo" src="assets/photos/axel-portrait.jpg" alt="Axel, owner of Axel's Trusted LLC"> -->
+          <div class="meet-axel__photo-placeholder" role="img" aria-label="Axel portrait placeholder">
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="#9ca3af" stroke-width="1.5">
+              <circle cx="36" cy="28" r="14"/>
+              <path d="M8 64c0-15.464 12.536-28 28-28s28 12.536 28 28"/>
+            </svg>
+            <span>Portrait Photo<br>Coming Soon</span>
+          </div>
+        </div>
+
+        <div class="meet-axel__text">
+          <h2 class="section-label" id="about-title">Meet Axel</h2>
+
+          <p class="meet-axel__para">
+            I started Axel's Trusted LLC because I believe homeowners deserve a handyman they can actually trust —
+            someone who shows up when they say they will, does the work right the first time,
+            and charges a fair price. No bait-and-switch. No ghosting after you call.
+          </p>
+
+          <p class="meet-axel__para">
+            Every job I take on gets the same care and attention I'd give my own home.
+            Whether it's patching a small hole or transforming an entire room, I take pride
+            in leaving every space better than I found it. That's my commitment to you.
+          </p>
+
+          <p class="meet-axel__sig">— Axel</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =============================================
+         TESTIMONIALS (reserved slot)
+    ============================================= -->
+    <div class="testimonials" aria-label="Customer testimonials — coming soon">
+      <div class="testimonials__inner">
+        <p class="testimonials__placeholder">
+          Customer reviews coming soon — check back after your first project with us.
+        </p>
+      </div>
+    </div>
+
+    <!-- =============================================
+         WHY CHOOSE US
+    ============================================= -->
+    <section class="why" id="why" aria-labelledby="why-title">
+      <div class="container">
+        <div class="why__header">
+          <h2 class="section-label centered" id="why-title">Why Homeowners Choose Us</h2>
+        </div>
+
+        <div class="why__grid">
+
+          <div class="why-card">
+            <div class="why-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <h3 class="why-card__title">Reliable</h3>
+            <p class="why-card__proof">We show up on time, every time. Your schedule matters to us.</p>
+          </div>
+
+          <div class="why-card">
+            <div class="why-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h3 class="why-card__title">Quality Work</h3>
+            <p class="why-card__proof">Done right the first time — we don't cut corners or rush.</p>
+          </div>
+
+          <div class="why-card">
+            <div class="why-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+              </svg>
+            </div>
+            <h3 class="why-card__title">Fair Pricing</h3>
+            <p class="why-card__proof">Honest quotes upfront. No hidden fees, no surprises on the invoice.</p>
+          </div>
+
+          <div class="why-card">
+            <div class="why-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+            <h3 class="why-card__title">Local &amp; Family-Run</h3>
+            <p class="why-card__proof">We're your neighbors, not a franchise. We care about this community.</p>
+          </div>
+
+          <div class="why-card">
+            <div class="why-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h3 class="why-card__title">Licensed &amp; Insured</h3>
+            <p class="why-card__proof">Full coverage on every job. You're protected — and so is your home.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================
+         CTA BAND
+    ============================================= -->
+    <section class="cta-band" aria-labelledby="cta-title">
+      <div class="container">
+        <h2 class="cta-band__headline" id="cta-title">Ready to Get Started?</h2>
+        <p class="cta-band__para">
+          Whether it's a small repair or a room transformation, we're here to help.
+          Get in touch today for a free, no-obligation quote.
+        </p>
+        <div class="cta-band__buttons">
+          <a href="#contact" class="btn btn-white">Request a Free Quote</a>
+          <a href="tel:+19414049777" class="btn btn-outline">Call (941) 404-9777</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================
+         CONTACT
+    ============================================= -->
+    <section class="contact" id="contact" aria-labelledby="contact-title">
+      <div class="container contact__grid">
+
+        <!-- Form -->
+        <div>
+          <div class="contact__form-header">
+            <h2 class="section-label" id="contact-title">Get in Touch</h2>
+            <p class="contact__instruction">
+              Fill out the form below and we'll get back to you within 24 hours —
+              or call us directly if you'd prefer to talk right away.
+            </p>
+          </div>
+
+          <!-- REPLACE action with your Formspree endpoint or backend URL -->
+          <!-- Example: action="https://formspree.io/f/YOUR_FORM_ID" -->
+          <form id="contactForm" action="#" method="POST" novalidate aria-label="Contact form">
+            <input type="hidden" name="_subject" value="New quote request — Axel's Trusted LLC" />
+
+            <div class="form-group">
+              <label for="name">Your Name</label>
+              <input type="text" id="name" name="name" placeholder="John Smith" required autocomplete="name" />
+            </div>
+
+            <div class="form-group">
+              <label for="phone">Phone Number</label>
+              <input type="tel" id="phone" name="phone" placeholder="(555) 000-0000" required autocomplete="tel" />
+            </div>
+
+            <div class="form-group">
+              <label for="service">Service Needed</label>
+              <select id="service" name="service" required>
+                <option value="" disabled selected>Select a service…</option>
+                <option value="landscaping">Landscaping &amp; Lawn Care</option>
+                <option value="flooring">Flooring Installation</option>
+                <option value="blinds">Blinds Installation</option>
+                <option value="drywall">Drywall Repair &amp; Replacement</option>
+                <option value="painting">Interior &amp; Exterior Painting</option>
+                <option value="handyman">General Handyman Services</option>
+                <option value="other">Other / Not Sure</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="message">Tell Us About Your Project</label>
+              <textarea id="message" name="message" placeholder="Describe what you need — even a rough idea helps us prepare." rows="4"></textarea>
+            </div>
+
+            <button type="submit" class="form-submit">Send My Request</button>
+          </form>
+        </div>
+
+        <!-- Contact Info Card -->
+        <aside class="contact-info" aria-label="Contact information">
+          <p class="contact-info__title">Contact Us Directly</p>
+
+          <div class="contact-info__item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91A16 16 0 0016 17.9l1.1-1.26a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+            <div>
+              <p class="contact-info__label">Phone</p>
+              <p class="contact-info__value"><a href="tel:+19414049777">(941) 404-9777</a></p>
+            </div>
+          </div>
+
+          <div class="contact-info__item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <div>
+              <p class="contact-info__label">Email</p>
+              <p class="contact-info__value"><a href="mailto:axelsllc22@gmail.com">axelsllc22@gmail.com</a></p>
+            </div>
+          </div>
+
+          <div class="contact-info__divider" aria-hidden="true"></div>
+
+          <div class="contact-info__item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <div>
+              <p class="contact-info__label">Service Area</p>
+              <p class="contact-info__value">Southwest Florida<br>Fort Myers · Naples · Cape Coral<br>Sarasota · Bonita Springs · Venice</p>
+            </div>
+          </div>
+
+          <div class="contact-info__item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <div>
+              <p class="contact-info__label">Hours</p>
+              <!-- REPLACE: your hours -->
+              <p class="contact-info__value">Mon – Fri: 8am – 6pm<br>Sat: 9am – 4pm</p>
+            </div>
+          </div>
+
+          <div class="contact-info__item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+              <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+            </svg>
+            <div>
+              <p class="contact-info__label">Facebook</p>
+              <p class="contact-info__value"><a href="https://www.facebook.com/profile.php?id=61573187173394" target="_blank" rel="noopener">Follow Us on Facebook</a></p>
+            </div>
+          </div>
+
+          <div class="contact-info__divider" aria-hidden="true"></div>
+
+          <p style="font-size:0.82rem; color:rgba(245,241,234,0.5); line-height:1.6;">
+            We typically respond to all quote requests within one business day.
+            For urgent repairs, give us a call directly.
+          </p>
+        </aside>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =============================================
+       FOOTER
+  ============================================= -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer__inner">
+      <div>
+        <div class="footer__brand">
+          <img src="LOGO.png" alt="Axel's Trusted LLC" />
+          <span class="footer__brand-name">Axel's<br>Trusted LLC</span>
+        </div>
+        <p class="footer__tagline">Reliable handyman services — done right, every time.</p>
+        <div class="footer__contact-row">
+          <a href="tel:+19414049777">(941) 404-9777</a>
+          <a href="mailto:axelsllc22@gmail.com">axelsllc22@gmail.com</a>
+          <a href="https://www.facebook.com/profile.php?id=61573187173394" target="_blank" rel="noopener">Facebook</a>
+        </div>
+      </div>
+
+      <div class="footer__area">
+        <p class="footer__area-title">Service Area</p>
+        <ul class="footer__area-list" role="list">
+          <li>Fort Myers</li>
+          <li>Cape Coral</li>
+          <li>Naples</li>
+          <li>Sarasota</li>
+          <li>Bonita Springs</li>
+          <li>Venice &amp; surrounding areas</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <p>&copy; 2026 Axel's Trusted LLC. All rights reserved.</p>
+      <div class="footer__trust-badges">
+        <span class="footer__trust-badge">Licensed</span>
+        <span class="footer__trust-badge">Insured</span>
+        <span class="footer__trust-badge">Free Estimates</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Mobile floating call button -->
+  <a href="tel:+19414049777" class="float-call" aria-label="Call Axel's Trusted LLC">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91A16 16 0 0016 17.9l1.1-1.26a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+    </svg>
+  </a>
+
+  <script src="script.js"></script>
+</body>
+</html>
