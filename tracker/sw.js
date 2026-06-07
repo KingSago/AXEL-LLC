@@ -1,10 +1,12 @@
 /* ============================================================
    Tracker service worker — caches the app shell so the PWA
    loads instantly and works offline. Data comes from Firestore
-   (which has its own offline cache); this only covers static
-   assets.
+   (which has its own offline cache); this covers static assets
+   AND the Firebase SDK modules tracker.js imports from Google's
+   CDN — without those cached, the app's JS can't even start
+   offline and the page stays blank.
    ============================================================ */
-const CACHE_VERSION = "tracker-shell-v1";
+const CACHE_VERSION = "tracker-shell-v2";
 
 const SHELL_ASSETS = [
   "/",
@@ -19,9 +21,25 @@ const SHELL_ASSETS = [
   "/icons/apple-touch-icon.png",
 ];
 
+const CDN_ASSETS = [
+  "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js",
+  "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js",
+  "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js",
+  "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js",
+];
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_VERSION).then(async (cache) => {
+      await cache.addAll(SHELL_ASSETS);
+      await Promise.all(
+        CDN_ASSETS.map((url) =>
+          fetch(url, { mode: "cors" })
+            .then((res) => res.ok && cache.put(url, res))
+            .catch(() => {})
+        )
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -35,15 +53,18 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-/* Cache-first for the app shell, network passthrough for everything
-   else (Firebase/Firestore/Functions calls must always hit the network
-   directly so auth + live data work correctly). */
+/* Cache-first for the app shell and the Firebase SDK CDN files (so the
+   app can boot offline). Firestore/Auth/Functions calls themselves go
+   straight to the network — the SDK handles those, including offline
+   queuing of writes via persistentLocalCache. */
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
+  const isFirebaseApi =
+    url.hostname.endsWith("googleapis.com") || url.hostname.endsWith("firebaseio.com");
+  if (isFirebaseApi) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
