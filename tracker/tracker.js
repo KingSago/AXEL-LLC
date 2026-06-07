@@ -754,15 +754,33 @@ function field(label, innerHtml) {
 /* ============================================================
    REPORTS
    ============================================================ */
+let reportsTab = "payments";
 $("#reports-month").addEventListener("change", renderReports);
+document.querySelectorAll("#reports-tabs [data-report-tab]").forEach((b) =>
+  b.addEventListener("click", () => {
+    reportsTab = b.dataset.reportTab;
+    document.querySelectorAll("#reports-tabs [data-report-tab]").forEach((x) =>
+      x.classList.toggle("is-active", x === b));
+    renderReports();
+  }));
 
-async function renderReports() {
+function reportMonthRange() {
   const monthInput = $("#reports-month");
   if (!monthInput.value) monthInput.value = today().slice(0, 7);
   const month = monthInput.value;
   const start = month + "-01";
   const [yy, mm] = month.split("-").map(Number);
   const end = new Date(yy, mm, 1).toISOString().slice(0, 10); // first day next month
+  return { month, start, end };
+}
+
+async function renderReports() {
+  if (reportsTab === "mows") return renderMowReport();
+  return renderPaymentReport();
+}
+
+async function renderPaymentReport() {
+  const { start, end } = reportMonthRange();
 
   let collected = 0; const byMethod = {};
   try {
@@ -788,6 +806,62 @@ async function renderReports() {
       el("table", { class: "ledger" },
         el("tr", {}, el("th", {}, "Method"), el("th", { class: "amt" }, "Collected")),
         ...(methodRows.length ? methodRows : [el("tr", {}, el("td", { colspan: "2" }, "No payments this month."))]))));
+}
+
+async function renderMowReport() {
+  const { start, end } = reportMonthRange();
+
+  // Cuts live in two places: "charges" (type "cut", per-cut accounts) and
+  // "cuts" subcollections (monthly accounts). Pull both and tag each with its account.
+  const entries = [];
+  try {
+    const [chargeSnap, cutSnap] = await Promise.all([
+      getDocs(query(collectionGroup(db, "charges"), where("date", ">=", start), where("date", "<", end))),
+      getDocs(query(collectionGroup(db, "cuts"),    where("date", ">=", start), where("date", "<", end))),
+    ]);
+    chargeSnap.forEach((d) => {
+      const c = d.data();
+      if (c.type === "cut" && c.date) entries.push({ accountId: d.ref.parent.parent.id, date: c.date });
+    });
+    cutSnap.forEach((d) => {
+      const c = d.data();
+      if (c.date) entries.push({ accountId: d.ref.parent.parent.id, date: c.date });
+    });
+  } catch (e) { /* may need an index the first time */ }
+
+  const nameOf = (id) => accounts.find((a) => a.id === id)?.name || "Unknown account";
+
+  entries.sort((a, b) => b.date.localeCompare(a.date));
+
+  const byAccount = {};
+  for (const e of entries) byAccount[e.accountId] = (byAccount[e.accountId] || 0) + 1;
+  const breakdownRows = Object.entries(byAccount)
+    .sort((a, b) => b[1] - a[1] || nameOf(a[0]).localeCompare(nameOf(b[0])))
+    .map(([id, n]) => el("tr", {}, el("td", {}, nameOf(id)), el("td", { class: "amt" }, String(n))));
+
+  const mowedIds = new Set(entries.map((e) => e.accountId));
+  const notMowed = accounts.filter((a) => a.active !== false && !mowedIds.has(a.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const entryRows = entries
+    .map((e) => el("tr", {}, el("td", {}, fmtDate(e.date)), el("td", {}, nameOf(e.accountId))));
+
+  $("#reports-body").replaceChildren(
+    el("div", { class: "summary" },
+      sumCard("Cuts Logged", String(entries.length), "green"),
+      sumCard("Not Yet Mowed", String(notMowed.length), notMowed.length ? "amber" : "green")),
+    el("div", { class: "card" }, el("h3", {}, "Cuts by account"),
+      el("table", { class: "ledger" },
+        el("tr", {}, el("th", {}, "Account"), el("th", { class: "amt" }, "Cuts")),
+        ...(breakdownRows.length ? breakdownRows : [el("tr", {}, el("td", { colspan: "2" }, "No cuts logged this month."))]))),
+    el("div", { class: "card" }, el("h3", {}, "Not yet mowed this month"),
+      notMowed.length
+        ? el("div", { class: "pill-row" }, ...notMowed.map((a) => el("span", { class: "pill amber" }, a.name)))
+        : el("p", { class: "acct-row__meta" }, "Every active account has been mowed this month.")),
+    el("div", { class: "card" }, el("h3", {}, "Cut log"),
+      el("table", { class: "ledger" },
+        el("tr", {}, el("th", {}, "Date"), el("th", {}, "Account")),
+        ...(entryRows.length ? entryRows : [el("tr", {}, el("td", { colspan: "2" }, "No cuts logged this month."))]))));
 }
 
 /* ============================================================

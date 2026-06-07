@@ -166,6 +166,11 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .pill.gray { background: var(--light-gray); color: var(--gray); }
 .pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 
+.report-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.report-tab { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--light-gray);
+  background: #fff; color: var(--charcoal); font-weight: 600; font-size: .85rem; cursor: pointer; }
+.report-tab.is-active { background: var(--charcoal); color: #fff; border-color: var(--charcoal); }
+
 /* ---------- Cards / forms ---------- */
 .card { background: #fff; border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); margin-bottom: 16px; }
 .card h3 { font-family: var(--font-display); text-transform: uppercase; font-size: 1.1rem; margin-bottom: 12px; }
