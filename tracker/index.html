@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Axel's Trusted LLC — Tracker</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#1A1A1A" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tracker" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="tracker.css" />
+</head>
+<body>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="login-view" class="login hidden">
+    <form id="login-form" class="login__card">
+      <h1 class="login__title">Axel's Trusted LLC</h1>
+      <p class="login__sub">Lawn &amp; Payments Tracker</p>
+      <label>Email<input type="email" id="login-email" autocomplete="username" required /></label>
+      <label>Password<input type="password" id="login-password" autocomplete="current-password" required /></label>
+      <button type="submit" class="btn btn-primary">Sign In</button>
+      <p id="login-error" class="login__error"></p>
+    </form>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <div id="app" class="hidden">
+    <header class="topbar">
+      <div class="topbar__brand">Axel's Trusted LLC</div>
+      <nav class="topbar__nav">
+        <button data-nav="dashboard" class="topbar__link is-active">Dashboard</button>
+        <button data-nav="reports" class="topbar__link">Reports</button>
+        <button data-nav="settings" class="topbar__link">Settings</button>
+      </nav>
+      <button id="signout-btn" class="topbar__signout">Sign out</button>
+    </header>
+
+    <main class="main">
+      <!-- Dashboard -->
+      <section id="dashboard-view" class="view">
+        <div class="view__head">
+          <h2>Dashboard</h2>
+          <div class="quick-actions">
+            <button class="btn btn-green" id="quick-pay-btn">$ Paid</button>
+            <button class="btn btn-primary" id="add-account-btn">+ Add Account</button>
+          </div>
+        </div>
+
+        <div class="summary" id="summary-cards"></div>
+        <div class="chart-card">
+          <h3>Collected — last 6 months</h3>
+          <div class="chart" id="income-chart"></div>
+        </div>
+
+        <!-- Cuts calendar -->
+        <div class="chart-card">
+          <h3>Cuts This Month</h3>
+          <div id="cut-calendar"></div>
+        </div>
+
+        <div class="list__head">
+          <h3>Accounts — who owes</h3>
+          <div class="list__controls">
+            <input type="search" id="account-search" placeholder="Search accounts…" />
+            <select id="account-sort">
+              <option value="balance-desc">Most Amount Owed</option>
+              <option value="last-cut">Last Cut</option>
+              <option value="oldest-cut">Oldest Cut</option>
+              <option value="name-az">Name A–Z</option>
+              <option value="address-az">Street A–Z</option>
+              <option value="city-az">City A–Z</option>
+              <option value="billing-type">Billing Type</option>
+            </select>
+          </div>
+        </div>
+        <div id="account-list" class="account-list"></div>
+      </section>
+
+      <!-- Account detail -->
+      <section id="account-view" class="view hidden">
+        <button class="link-back" id="back-to-dash">&larr; Back</button>
+        <div id="account-detail"></div>
+      </section>
+
+      <!-- Reports -->
+      <section id="reports-view" class="view hidden">
+        <div class="view__head"><h2>Reports</h2>
+          <input type="month" id="reports-month" />
+        </div>
+        <div id="reports-body"></div>
+      </section>
+
+      <!-- Settings -->
+      <section id="settings-view" class="view hidden">
+        <div class="view__head"><h2>Settings</h2></div>
+        <form id="settings-form" class="card form"></form>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal host -->
+  <div id="modal-root" class="modal-root hidden"></div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="tracker.js"></script>
+</body>
+</html>
