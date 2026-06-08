@@ -6,7 +6,7 @@
    CDN — without those cached, the app's JS can't even start
    offline and the page stays blank.
    ============================================================ */
-const CACHE_VERSION = "tracker-shell-v2";
+const CACHE_VERSION = "tracker-shell-v3";
 
 const SHELL_ASSETS = [
   "/",
@@ -53,10 +53,15 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-/* Cache-first for the app shell and the Firebase SDK CDN files (so the
-   app can boot offline). Firestore/Auth/Functions calls themselves go
-   straight to the network — the SDK handles those, including offline
-   queuing of writes via persistentLocalCache. */
+/* Strategy:
+   - Our own app shell (HTML/JS/CSS/manifest) is NETWORK-FIRST: always try the
+     network so a fresh deploy loads immediately, falling back to cache when
+     offline. (Cache-first here meant deploys never showed up until the cache
+     version was bumped.)
+   - The versioned Firebase SDK CDN files + icons are CACHE-FIRST (immutable, and
+     needed for an offline boot).
+   - Firestore/Auth/Functions API calls bypass the worker entirely — the SDK
+     handles those, including offline write queuing via persistentLocalCache. */
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -66,6 +71,30 @@ self.addEventListener("fetch", (event) => {
     url.hostname.endsWith("googleapis.com") || url.hostname.endsWith("firebaseio.com");
   if (isFirebaseApi) return;
 
+  const sameOrigin = url.origin === self.location.origin;
+  const isShell =
+    sameOrigin &&
+    (request.mode === "navigate" ||
+      url.pathname === "/" ||
+      /\.(html|js|css|webmanifest)$/.test(url.pathname));
+
+  if (isShell) {
+    // Network-first: latest code when online, cached shell when offline.
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request).then((c) => c || caches.match("/index.html")))
+    );
+    return;
+  }
+
+  // Cache-first for CDN SDK modules + icons.
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
