@@ -14,6 +14,8 @@ const { FieldValue, Timestamp } = admin.firestore;
 // Secrets / params (set with:  firebase functions:secrets:set STRIPE_SECRET_KEY)
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+// Shared secret between the Gmail Apps Script forwarder and inboundPayment.
+const INBOUND_SHARED_SECRET = defineSecret("INBOUND_SHARED_SECRET");
 
 // Public base URL of the deployed tracker app (for Stripe redirect URLs).
 // Set with:  firebase functions:config is deprecated, so use a param:
@@ -61,6 +63,7 @@ module.exports = {
   accountIdForCustomer,
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
+  INBOUND_SHARED_SECRET,
   APP_BASE_URL,
   ALLOWED_UID,
 };

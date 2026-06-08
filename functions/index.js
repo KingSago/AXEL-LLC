@@ -13,3 +13,7 @@ exports.markInvoicePaid = require("./markInvoicePaid");
 
 // HTTPS webhook (called by Stripe)
 exports.stripeWebhook = require("./stripeWebhook");
+
+// HTTPS ingest (called by the Gmail Apps Script forwarder) — queues forwarded
+// Zelle/Venmo alerts for in-app review. Auth via shared secret.
+exports.inboundPayment = require("./inboundPayment");

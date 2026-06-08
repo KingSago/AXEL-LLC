@@ -72,7 +72,12 @@ firebase functions:secrets:set STRIPE_SECRET_KEY
 # paste sk_test_... when prompted
 firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
 # paste the webhook signing secret from step 5 (or 6 for local) when prompted
+firebase functions:secrets:set INBOUND_SHARED_SECRET
+# paste any long random string — the SAME value goes in the Apps Script (step 6)
 ```
+
+> Tip for `INBOUND_SHARED_SECRET`: generate a random value with
+> `powershell -c "[guid]::NewGuid().ToString('N')"` and keep it handy for step 6.
 
 **Non-secret params** — copy `functions/.env.example` to `functions/.env` and set:
 
@@ -139,6 +144,76 @@ When everything works in **Test mode**, flip Stripe to **Live mode**, repeat ste
 
 ---
 
+## 6. Payments automation (Zelle / Venmo email forwarding)
+
+Goal: forwarded Venmo and Fifth Third Zelle alerts land in the app's **Payments**
+tab as a review queue. Axel taps **Confirm** to post each one — nothing changes a
+balance until he does. (Cash/check are still recorded by hand.)
+
+```
+Venmo / Fifth Third alert → (Gmail filter) → dedicated Gmail
+   → Apps Script (every 5 min) → inboundPayment Cloud Function
+   → pendingPayments queue → Payments tab → Confirm → posts to the account
+```
+
+### 6.1 Make `axelpayments1@gmail.com`
+
+The dedicated Gmail for this is **`axelpayments1@gmail.com`**. It needs its own
+inbox because the Apps Script runs over the whole mailbox — keep it free of
+everything except payment alerts.
+
+### 6.2 Auto-forward the alerts into it
+
+In Axel's **everyday inbox** (where the bank + Venmo currently send alerts):
+
+1. **Settings → See all settings → Forwarding and POP/IMAP → Add a forwarding
+   address** → enter `axelpayments1@gmail.com` → confirm the verification link it emails
+   to that inbox. (Leave the top "Forward a copy…" option **off** — the filters
+   below do the targeted forwarding.)
+2. Create **two filters** (search bar → filter icon → fill **From** → Create
+   filter → check **Forward it to** → `axelpayments1@gmail.com` → Create filter):
+   - **Venmo:** From `venmo@venmo.com`
+   - **Fifth Third / Zelle:** From the bank's alert address — confirm it from a
+     real alert (commonly under `53.com`). *(Needed before Zelle works.)*
+
+> Alternative: change the notification email at Venmo/Fifth Third directly to the
+> dedicated Gmail. Then no filters are needed — that inbox only ever gets alerts.
+
+### 6.3 Install the Apps Script forwarder
+
+1. Signed in as the **dedicated Gmail**, go to https://script.google.com → **New
+   project**. Paste in [`apps-script/forwarder.gs`](apps-script/forwarder.gs).
+2. Set the two constants at the top:
+   - `FUNCTION_URL` → your deployed function URL:
+     `https://us-central1-YOUR-PROJECT.cloudfunctions.net/inboundPayment`
+   - `SHARED_SECRET` → the **same value** you set for `INBOUND_SHARED_SECRET`.
+3. **Run** `forwardPayments` once and grant the Gmail + external-request
+   permissions it requests.
+4. Click the **clock icon (Triggers) → Add Trigger**: function `forwardPayments`,
+   **Time-driven → Minutes timer → Every 5 minutes**. Save.
+
+### 6.4 Test it
+
+- Forward (or wait for) a real Venmo alert into `axelpayments1@gmail.com` → within ~5
+  min it appears in the **Payments** tab with the amount, payer, and note. Confirm
+  it → the payment posts to the chosen account and the balance drops.
+- Re-run the script / forward the same email again → **no duplicate** appears
+  (deduped by Gmail message id).
+- Locally you can simulate the Apps Script POST without Gmail:
+
+  ```powershell
+  $body = '{"secret":"YOUR_SECRET","messageId":"test-1","from":"Venmo <venmo@venmo.com>","subject":"Y Acosta paid you $85.00","body":"Y Acosta paid you `$85.00 Porto bello yard See transaction","receivedAt":"2026-06-03T15:50:00Z"}'
+  curl.exe -X POST "http://localhost:5001/YOUR-PROJECT/us-central1/inboundPayment" -H "content-type: application/json" -d $body
+  ```
+
+> **Zelle:** the parser ships with a Venmo-complete implementation and a Fifth
+> Third **stub** that still queues the amount for manual assignment. Once you
+> capture a real Fifth Third alert, finalize the Zelle branch in
+> [`functions/parsePaymentEmail.js`](functions/parsePaymentEmail.js) and add the
+> bank's sender to the Gmail filter + the script's `SEARCH_QUERY`.
+
+---
+
 ## How it works (quick reference)
 
 | Action | What happens |
@@ -150,6 +225,8 @@ When everything works in **Test mode**, flip Stripe to **Live mode**, repeat ste
 | **Enable Autopay** (monthly) | Generates a Stripe enrollment link to text the customer; once they enter a card/bank, a monthly subscription auto-charges them. |
 | **Record Payment** | Logs a direct cash/check/Zelle payment not tied to an invoice. |
 | **Mark Paid** (on an open invoice) | Marks the Stripe invoice paid out-of-band (customer paid by cash/check/Zelle). |
+| Venmo/Zelle alert is forwarded | `inboundPayment` parses it, fuzzy-matches an account, and queues it on the **Payments** tab. |
+| **Confirm** (Payments tab) | Posts the queued payment to the chosen account (date = email date); learns the payer name as an alias. No balance change until confirmed. |
 | Stripe charges/pays an invoice | The webhook records the charge + payment automatically; dashboard updates. |
 
 **Data lives in Firestore** under `accounts/{id}` with `charges`, `payments`,

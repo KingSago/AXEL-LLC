@@ -9,7 +9,7 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentSingleTabManager,
   collection, collectionGroup, doc, getDoc, getDocs, setDoc,
-  updateDoc, addDoc, deleteField, onSnapshot, query, where, orderBy, limit,
+  updateDoc, addDoc, deleteField, arrayUnion, onSnapshot, query, where, orderBy, limit,
   runTransaction, increment, serverTimestamp, connectFirestoreEmulator,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
@@ -129,7 +129,9 @@ onAuthStateChanged(auth, (user) => {
     $("#app").classList.add("hidden");
     $("#login-view").classList.remove("hidden");
     if (unsubAccounts) { unsubAccounts(); unsubAccounts = null; }
+    if (unsubPending) { unsubPending(); unsubPending = null; }
     accounts = [];
+    pendingPayments = [];
   }
 });
 
@@ -175,12 +177,12 @@ async function addCharge(acc, { amount, description }) {
   });
 }
 
-async function recordManualPayment(acc, { amount, method, note }) {
+async function recordManualPayment(acc, { amount, method, note, date }) {
   const ref = doc(db, "accounts", acc.id);
   const amt = Number(amount);
   await runTransaction(db, async (tx) => {
     const payRef = doc(collection(ref, "payments"));
-    tx.set(payRef, { amount: amt, method, note: note || "", date: today(), createdAt: serverTimestamp() });
+    tx.set(payRef, { amount: amt, method, note: note || "", date: date || today(), createdAt: serverTimestamp() });
     tx.set(ref, {
       totalPaid: increment(amt), balance: increment(-amt), lastPaymentAt: serverTimestamp(),
     }, { merge: true });
@@ -193,6 +195,8 @@ async function recordManualPayment(acc, { amount, method, note }) {
 let accounts = [];
 let unsubAccounts = null;
 let currentSort = "balance-desc";
+let pendingPayments = [];
+let unsubPending = null;
 
 function tsMs(ts) {
   if (!ts) return 0;
@@ -229,6 +233,7 @@ function startApp() {
     },
     (err) => toast("Data sync error: " + err.message, true),
   );
+  startPendingListener();
   loadSettings();
   show("dashboard");
 }
@@ -244,14 +249,170 @@ $("#quick-pay-btn").addEventListener("click", quickPayModal);
 
 function show(view) {
   currentView = view;
-  for (const v of ["dashboard", "account", "reports", "settings"]) {
+  for (const v of ["dashboard", "account", "payments", "reports", "settings"]) {
     $(`#${v}-view`).classList.toggle("hidden", v !== view);
   }
   document.querySelectorAll("[data-nav]").forEach((b) =>
     b.classList.toggle("is-active", b.dataset.nav === view));
   if (view === "dashboard") renderDashboard();
+  if (view === "payments") renderPayments();
   if (view === "reports") renderReports();
   if (view === "settings") renderSettings();
+}
+
+/* ============================================================
+   PAYMENTS QUEUE (forwarded Zelle/Venmo alerts to review)
+   ============================================================ */
+const pendingCol = collection(db, "pendingPayments");
+
+function startPendingListener() {
+  if (unsubPending) return;
+  const q = query(pendingCol, where("status", "==", "pending"));
+  unsubPending = onSnapshot(q,
+    (snap) => {
+      pendingPayments = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.receivedAt || "").localeCompare(a.receivedAt || ""));
+      updatePaymentsBadge();
+      if (currentView === "payments") renderPayments();
+    },
+    (err) => console.warn("Pending payments sync error:", err.message),
+  );
+}
+
+function updatePaymentsBadge() {
+  const badge = $("#payments-badge");
+  if (!badge) return;
+  const n = pendingPayments.length;
+  badge.textContent = String(n);
+  badge.classList.toggle("hidden", n === 0);
+}
+
+function renderPayments() {
+  const wrap = $("#payments-queue");
+  if (!pendingPayments.length) {
+    wrap.replaceChildren(el("p", { class: "card" },
+      "Nothing to review. Forwarded Zelle & Venmo alerts will show up here."));
+    return;
+  }
+  wrap.replaceChildren(...pendingPayments.map(pendingCard));
+}
+
+function pendingCard(p) {
+  const active = accounts.filter((a) => a.active !== false)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  const confident = p.confidence === "high" && p.suggestedAccountId;
+
+  // Account picker, pre-selected to the suggested match.
+  const select = el("select", { class: "pending__select" },
+    el("option", { value: "" }, "Select account…"));
+  active.forEach((a) => {
+    const owes = Number(a.balance || 0) > 0.005;
+    const opt = el("option", { value: a.id }, a.name + (owes ? ` — owes ${fmt(a.balance)}` : ""));
+    if (a.id === p.suggestedAccountId) opt.selected = true;
+    select.append(opt);
+  });
+
+  const amountInput = el("input", {
+    class: "pending__amt-input", type: "number", min: "0.01", step: "0.01",
+    value: p.amount != null ? Number(p.amount).toFixed(2) : "",
+  });
+
+  // Suggestion chips (low confidence) — tap to fill the picker.
+  const chips = el("div", { class: "pill-row pending__chips" });
+  if (!confident && Array.isArray(p.candidates)) {
+    p.candidates.filter((c) => c.score > 0).slice(0, 3).forEach((c) => {
+      chips.append(el("button", { type: "button", class: "chip",
+        onclick: () => { select.value = c.accountId; } },
+        `${c.name} · ${Math.round(c.score * 100)}%`));
+    });
+  }
+
+  const methodPill = el("span", { class: `pill ${p.method === "venmo" ? "blue" : "gray"}` },
+    METHOD_LABEL[p.method] || p.method);
+
+  const hint = confident
+    ? el("div", { class: "pending__hint ok" }, "Suggested match — confirm to post")
+    : el("div", { class: "acct-row__meta" }, "Pick the account this belongs to");
+
+  const confirmBtn = el("button", { class: "btn btn-green",
+    onclick: () => confirmPending(p, select.value, amountInput.value) }, "✓ Confirm");
+  const dismissBtn = el("button", { class: "btn btn-outline",
+    onclick: () => dismissPending(p) }, "Dismiss");
+
+  return el("div", { class: "card pending" + (confident ? " pending--ok" : "") },
+    el("div", { class: "pending__head" },
+      el("div", { class: "pending__amt" }, fmt(p.amount || 0)),
+      methodPill,
+      el("div", { class: "acct-row__meta", style: "margin-left:auto" }, fmtDate(p.receivedAt))),
+    el("div", { class: "pending__from" },
+      el("strong", {}, p.payerNameRaw || "(no name)"),
+      p.note ? el("span", { class: "pending__note" }, ` · “${p.note}”`) : null),
+    hint,
+    chips.childNodes.length ? chips : null,
+    el("label", { class: "pending__field" }, "Account", select),
+    el("label", { class: "pending__field" }, "Amount ($)", amountInput),
+    el("div", { class: "detail__actions pending__actions" }, confirmBtn, dismissBtn));
+}
+
+async function confirmPending(p, accountId, amountStr) {
+  if (!accountId) { toast("Pick an account first", true); return; }
+  const acc = accounts.find((a) => a.id === accountId);
+  if (!acc) { toast("Account not found", true); return; }
+  const amount = Number(amountStr);
+  if (!(amount > 0)) { toast("Enter a valid amount", true); return; }
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const pendRef = doc(db, "pendingPayments", p.id);
+      const pendSnap = await tx.get(pendRef);
+      if (!pendSnap.exists() || pendSnap.data().status !== "pending") {
+        throw new Error("This payment was already handled.");
+      }
+      const accRef = doc(db, "accounts", accountId);
+      const payRef = doc(collection(accRef, "payments"));
+      const note = p.note ? `${METHOD_LABEL[p.method]} · ${p.note}` : `${METHOD_LABEL[p.method]} (forwarded)`;
+
+      tx.set(payRef, {
+        amount, method: p.method, note,
+        date: (p.receivedAt || today()).slice(0, 10),
+        createdAt: serverTimestamp(),
+        fromPendingId: p.id,
+      });
+
+      const accUpdate = {
+        totalPaid: increment(amount),
+        balance: increment(-amount),
+        lastPaymentAt: serverTimestamp(),
+      };
+      // Teach the matcher: when it wasn't already confident, remember this
+      // payer name on the account so the next email matches automatically.
+      if (p.confidence !== "high" && p.payerNameRaw) {
+        accUpdate.paymentAliases = arrayUnion(p.payerNameRaw);
+      }
+      tx.set(accRef, accUpdate, { merge: true });
+
+      tx.update(pendRef, {
+        status: "confirmed",
+        confirmedAccountId: accountId,
+        confirmedPaymentId: payRef.id,
+        resolvedAt: serverTimestamp(),
+      });
+    });
+    toast(`Payment posted — ${acc.name}`);
+  } catch (err) {
+    toast(err.message || "Could not confirm payment", true);
+  }
+}
+
+async function dismissPending(p) {
+  try {
+    await updateDoc(doc(db, "pendingPayments", p.id),
+      { status: "dismissed", resolvedAt: serverTimestamp() });
+    toast("Dismissed");
+  } catch (err) {
+    toast(err.message || "Could not dismiss", true);
+  }
 }
 
 /* ============================================================

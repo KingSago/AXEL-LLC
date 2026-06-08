@@ -37,6 +37,7 @@
       <div class="topbar__brand">Axel's Trusted LLC</div>
       <nav class="topbar__nav">
         <button data-nav="dashboard" class="topbar__link is-active">Dashboard</button>
+        <button data-nav="payments" class="topbar__link">Payments<span id="payments-badge" class="nav-badge hidden">0</span></button>
         <button data-nav="reports" class="topbar__link">Reports</button>
         <button data-nav="settings" class="topbar__link">Settings</button>
       </nav>
@@ -88,6 +89,17 @@
       <section id="account-view" class="view hidden">
         <button class="link-back" id="back-to-dash">&larr; Back</button>
         <div id="account-detail"></div>
+      </section>
+
+      <!-- Payments review queue -->
+      <section id="payments-view" class="view hidden">
+        <div class="view__head">
+          <h2>Payments to Review</h2>
+        </div>
+        <p class="acct-row__meta" style="margin-bottom:14px">
+          Forwarded Zelle &amp; Venmo alerts land here. Pick the account and tap Confirm to post the payment — nothing changes a balance until you do.
+        </p>
+        <div id="payments-queue"></div>
       </section>
 
       <!-- Reports -->
