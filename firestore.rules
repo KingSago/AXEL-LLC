@@ -10,9 +10,7 @@ service cloud.firestore {
     // server-side, so billing updates are unaffected by this lockdown.
     match /{document=**} {
       allow read, write: if request.auth != null
-                         && request.auth.uid in ["5wmmsTAofWcr06hlWpSpC3mIaQv1",
-                                                  "q80D95XwCNSIu5E001lC631LRWI3",
-                                                  "oFaClJlAgtXAnetHIf2ECWPCulf2"];
+                         && request.auth.uid in ["tK8tciP0BsUbDp8IC85q8ALUOsO2"];
     }
   }
 }

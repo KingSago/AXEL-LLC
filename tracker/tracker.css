@@ -189,10 +189,12 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .chip:hover { border-color: var(--charcoal); }
 .pending__field { display: flex; flex-direction: column; gap: 5px; font-weight: 600;
   font-size: .8rem; color: var(--gray); margin-top: 10px; text-transform: uppercase; letter-spacing: .03em; }
-.pending__select, .pending__amt-input { padding: 11px 12px; border: 1px solid var(--light-gray);
+.pending__select, .pending__amt-input, .pending__field-input { padding: 11px 12px; border: 1px solid var(--light-gray);
   border-radius: 8px; background: #fff; font-size: 1rem; color: var(--charcoal); font-weight: 500;
-  text-transform: none; letter-spacing: 0; }
+  text-transform: none; letter-spacing: 0; font-family: inherit; resize: vertical; }
 .pending__actions { margin-bottom: 0; }
+.pending .row { display: flex; gap: 12px; flex-wrap: wrap; }
+.pending .row .pending__field { flex: 1; min-width: 140px; }
 
 .report-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
 .report-tab { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--light-gray);

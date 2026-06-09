@@ -5,7 +5,17 @@
     "headers": [
       {
         "source": "**",
-        "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+        "headers": [
+          { "key": "X-Robots-Tag", "value": "noindex" },
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.cloudfunctions.net https://*.run.app https://*.firebaseio.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
+          },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        ]
       }
     ],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]

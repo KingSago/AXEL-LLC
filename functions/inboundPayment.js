@@ -13,10 +13,19 @@
    Expected JSON body:
      { secret, messageId, from, subject, body, receivedAt }
    ============================================================ */
+const crypto = require("crypto");
 const { onRequest } = require("firebase-functions/v2/https");
 const { db, FieldValue, INBOUND_SHARED_SECRET } = require("./lib/init");
 const parsePaymentEmail = require("./parsePaymentEmail");
 const matchAccount = require("./matchAccount");
+
+// Constant-time string compare, so a wrong secret can't be recovered by timing
+// the response. timingSafeEqual throws on unequal lengths, so guard that first.
+function secretsMatch(a, b) {
+  const bufA = Buffer.from(String(a), "utf8");
+  const bufB = Buffer.from(String(b), "utf8");
+  return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+}
 
 module.exports = onRequest({ secrets: [INBOUND_SHARED_SECRET] }, async (req, res) => {
   if (req.method !== "POST") {
@@ -24,7 +33,7 @@ module.exports = onRequest({ secrets: [INBOUND_SHARED_SECRET] }, async (req, res
   }
 
   const provided = req.get("x-inbound-secret") || req.body?.secret;
-  if (!provided || provided !== INBOUND_SHARED_SECRET.value()) {
+  if (!provided || !secretsMatch(provided, INBOUND_SHARED_SECRET.value())) {
     return res.status(401).send("Unauthorized");
   }
 

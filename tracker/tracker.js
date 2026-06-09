@@ -50,6 +50,10 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const fmt = (n) => money.format(Number(n || 0));
 const today = () => new Date().toISOString().slice(0, 10);
+// Escape user-controlled values before they go into a field() HTML string,
+// so a value like '"><img src=x onerror=…>' renders as literal text.
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const PAYMENT_METHODS = ["cash", "check", "zelle", "venmo", "cashapp"];
 const METHOD_LABEL = {
   cash: "Cash", check: "Check", zelle: "Zelle", venmo: "Venmo", cashapp: "Cash App",
@@ -130,8 +134,10 @@ onAuthStateChanged(auth, (user) => {
     $("#login-view").classList.remove("hidden");
     if (unsubAccounts) { unsubAccounts(); unsubAccounts = null; }
     if (unsubPending) { unsubPending(); unsubPending = null; }
+    if (unsubPendingAccounts) { unsubPendingAccounts(); unsubPendingAccounts = null; }
     accounts = [];
     pendingPayments = [];
+    pendingAccounts = [];
   }
 });
 
@@ -197,6 +203,8 @@ let unsubAccounts = null;
 let currentSort = "balance-desc";
 let pendingPayments = [];
 let unsubPending = null;
+let pendingAccounts = [];
+let unsubPendingAccounts = null;
 
 function tsMs(ts) {
   if (!ts) return 0;
@@ -234,6 +242,7 @@ function startApp() {
     (err) => toast("Data sync error: " + err.message, true),
   );
   startPendingListener();
+  startPendingAccountsListener();
   loadSettings();
   show("dashboard");
 }
@@ -249,13 +258,14 @@ $("#quick-pay-btn").addEventListener("click", quickPayModal);
 
 function show(view) {
   currentView = view;
-  for (const v of ["dashboard", "account", "payments", "reports", "settings"]) {
+  for (const v of ["dashboard", "account", "payments", "new-accounts", "reports", "settings"]) {
     $(`#${v}-view`).classList.toggle("hidden", v !== view);
   }
   document.querySelectorAll("[data-nav]").forEach((b) =>
     b.classList.toggle("is-active", b.dataset.nav === view));
   if (view === "dashboard") renderDashboard();
   if (view === "payments") renderPayments();
+  if (view === "new-accounts") renderNewAccounts();
   if (view === "reports") renderReports();
   if (view === "settings") renderSettings();
 }
@@ -416,6 +426,115 @@ async function dismissPending(p) {
 }
 
 /* ============================================================
+   NEW ACCOUNTS QUEUE (draft accounts awaiting confirmation)
+   ============================================================ */
+const pendingAccountsCol = collection(db, "pendingAccounts");
+
+function startPendingAccountsListener() {
+  if (unsubPendingAccounts) return;
+  const q = query(pendingAccountsCol, where("status", "==", "pending"));
+  unsubPendingAccounts = onSnapshot(q,
+    (snap) => {
+      pendingAccounts = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      updateNewAccountsBadge();
+      if (currentView === "new-accounts") renderNewAccounts();
+    },
+    (err) => console.warn("Pending accounts sync error:", err.message),
+  );
+}
+
+function updateNewAccountsBadge() {
+  const badge = $("#new-accounts-badge");
+  if (!badge) return;
+  const n = pendingAccounts.length;
+  badge.textContent = String(n);
+  badge.classList.toggle("hidden", n === 0);
+}
+
+function renderNewAccounts() {
+  const wrap = $("#new-accounts-queue");
+  if (!pendingAccounts.length) {
+    wrap.replaceChildren(el("p", { class: "card" },
+      "Nothing to review. Draft accounts you add to the queue will show up here."));
+    return;
+  }
+  wrap.replaceChildren(...pendingAccounts.map(pendingAccountCard));
+}
+
+function pendingAccountCard(p) {
+  const nameInput = el("input", { class: "pending__field-input", value: p.name || "", placeholder: "Name" });
+  const phoneInput = el("input", { class: "pending__field-input", value: p.phone || "", placeholder: "Phone" });
+  const emailInput = el("input", { class: "pending__field-input", type: "email", value: p.email || "", placeholder: "Email" });
+  const addressInput = el("input", { class: "pending__field-input", value: p.address || "", placeholder: "Address" });
+  const billingSelect = el("select", { class: "pending__field-input" },
+    el("option", { value: "percut" }, "Per cut"),
+    el("option", { value: "monthly" }, "Monthly"));
+  billingSelect.value = p.billingType === "monthly" ? "monthly" : "percut";
+  const rateInput = el("input", { class: "pending__field-input", type: "number", min: "0", step: "0.01", value: p.rate ?? "", placeholder: "Rate ($)" });
+  const notesInput = el("textarea", { class: "pending__field-input", rows: "2", placeholder: "Notes" }, p.notes || "");
+
+  const confirmBtn = el("button", { class: "btn btn-green",
+    onclick: () => confirmPendingAccount(p, {
+      name: nameInput.value, phone: phoneInput.value, email: emailInput.value,
+      address: addressInput.value, billingType: billingSelect.value,
+      rate: rateInput.value, notes: notesInput.value,
+    }) }, "✓ Confirm");
+  const dismissBtn = el("button", { class: "btn btn-outline",
+    onclick: () => dismissPendingAccount(p) }, "Dismiss");
+
+  return el("div", { class: "card pending" },
+    el("div", { class: "pending__head" },
+      el("strong", {}, p.name || "(no name)"),
+      p.source ? el("span", { class: "acct-row__meta", style: "margin-left:auto" }, p.source) : null),
+    el("label", { class: "pending__field" }, "Name", nameInput),
+    el("div", { class: "row" },
+      el("label", { class: "pending__field" }, "Phone", phoneInput),
+      el("label", { class: "pending__field" }, "Email", emailInput)),
+    el("label", { class: "pending__field" }, "Address", addressInput),
+    el("div", { class: "row" },
+      el("label", { class: "pending__field" }, "Billing", billingSelect),
+      el("label", { class: "pending__field" }, "Rate ($)", rateInput)),
+    el("label", { class: "pending__field" }, "Notes (kept on the account for reference)", notesInput),
+    el("div", { class: "detail__actions pending__actions" }, confirmBtn, dismissBtn));
+}
+
+async function confirmPendingAccount(p, fields) {
+  const name = fields.name.trim();
+  if (!name) { toast("Enter a name first", true); return; }
+  const rate = Number(fields.rate);
+  if (!(rate >= 0)) { toast("Enter a valid rate", true); return; }
+
+  try {
+    await createAccount({
+      name,
+      phone: fields.phone.trim(),
+      email: fields.email.trim(),
+      address: fields.address.trim(),
+      billingType: fields.billingType,
+      rate,
+      notes: fields.notes.trim(),
+    });
+    await updateDoc(doc(db, "pendingAccounts", p.id),
+      { status: "confirmed", resolvedAt: serverTimestamp() });
+    toast(`Account added — ${name}`);
+  } catch (err) {
+    toast(err.message || "Could not confirm account", true);
+  }
+}
+
+async function dismissPendingAccount(p) {
+  try {
+    await updateDoc(doc(db, "pendingAccounts", p.id),
+      { status: "dismissed", resolvedAt: serverTimestamp() });
+    toast("Dismissed");
+  } catch (err) {
+    toast(err.message || "Could not dismiss", true);
+  }
+}
+
+/* ============================================================
    DASHBOARD
    ============================================================ */
 async function renderDashboard() {
@@ -512,7 +631,7 @@ function rowPayModal(a) {
 function quickPayModal() {
   const active = accounts.filter((a) => a.active !== false);
   if (!active.length) { toast("No accounts yet", true); return; }
-  const acctOpts = active.map((a) => `<option value="${a.id}">${a.name}</option>`).join("");
+  const acctOpts = active.map((a) => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join("");
   const methodOpts = PAYMENT_METHODS.map((m) => `<option value="${m}">${METHOD_LABEL[m]}</option>`).join("");
   const body = el("div", {},
     field("Account", `<select name="accountId" required><option value="">Select account…</option>${acctOpts}</select>`),
@@ -741,15 +860,15 @@ function labelCharge(c) {
 function accountFormModal(existing) {
   const a = existing && existing.id ? existing : {};
   const body = el("div", {},
-    field("Name", `<input name="name" required value="${a.name || ""}">`),
+    field("Name", `<input name="name" required value="${esc(a.name || "")}">`),
     el("div", { class: "row" },
-      field("Phone", `<input name="phone" value="${a.phone || ""}">`),
-      field("Email", `<input name="email" type="email" value="${a.email || ""}">`)),
-    field("Address", `<input name="address" value="${a.address || ""}">`),
+      field("Phone", `<input name="phone" value="${esc(a.phone || "")}">`),
+      field("Email", `<input name="email" type="email" value="${esc(a.email || "")}">`)),
+    field("Address", `<input name="address" value="${esc(a.address || "")}">`),
     el("div", { class: "row" },
       field("Billing", `<select name="billingType"><option value="percut"${a.billingType === "percut" ? " selected" : ""}>Per cut</option><option value="monthly"${a.billingType === "monthly" ? " selected" : ""}>Monthly</option></select>`),
-      field("Rate ($)", `<input name="rate" type="number" min="0" step="0.01" required value="${a.rate ?? ""}">`)),
-    field("Notes", `<textarea name="notes" rows="2">${a.notes || ""}</textarea>`),
+      field("Rate ($)", `<input name="rate" type="number" min="0" step="0.01" required value="${esc(a.rate ?? "")}">`)),
+    field("Notes", `<textarea name="notes" rows="2">${esc(a.notes || "")}</textarea>`),
   );
   modal({
     title: a.id ? "Edit Account" : "Add Account",
@@ -833,9 +952,10 @@ async function enableAutopay(a) {
   try {
     const res = await call("createAutopayEnrollment")({ accountId: a.id });
     const url = res.data?.url;
+    const linkInput = el("input", { value: url, readonly: "", onclick: (e) => e.target.select() });
     const body = el("div", {},
       el("p", {}, "Send this secure link to the customer. They enter their card or bank once, and monthly payments are automatic."),
-      field("Enrollment link", `<input value="${url}" readonly onclick="this.select()">`));
+      el("label", {}, "Enrollment link", linkInput));
     modal({ title: "Autopay Enrollment", body, submitLabel: "Copy & open", onSubmit: async () => {
       try { await navigator.clipboard.writeText(url); } catch {}
       window.open(url, "_blank");
@@ -1039,12 +1159,12 @@ function renderSettings() {
   const form = $("#settings-form");
   form.replaceChildren(
     el("h3", {}, "Business info (shown on invoices via Stripe branding)"),
-    field("Business name", `<input name="bizName" value="${s.bizName || "Axel's Trusted LLC"}">`),
+    field("Business name", `<input name="bizName" value="${esc(s.bizName || "Axel's Trusted LLC")}">`),
     el("div", { class: "row" },
-      field("Phone", `<input name="bizPhone" value="${s.bizPhone || ""}">`),
-      field("Email", `<input name="bizEmail" value="${s.bizEmail || ""}">`)),
-    field("Default invoice due (days)", `<input name="dueDays" type="number" min="0" value="${s.dueDays ?? 14}">`),
-    field("Invoice memo / note", `<textarea name="memo" rows="2">${s.memo || ""}</textarea>`),
+      field("Phone", `<input name="bizPhone" value="${esc(s.bizPhone || "")}">`),
+      field("Email", `<input name="bizEmail" value="${esc(s.bizEmail || "")}">`)),
+    field("Default invoice due (days)", `<input name="dueDays" type="number" min="0" value="${esc(s.dueDays ?? 14)}">`),
+    field("Invoice memo / note", `<textarea name="memo" rows="2">${esc(s.memo || "")}</textarea>`),
     el("button", { class: "btn btn-primary", type: "submit" }, "Save settings"));
   form.onsubmit = async (e) => {
     e.preventDefault();
