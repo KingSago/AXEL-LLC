@@ -11,12 +11,24 @@ async function ensureCustomer(stripe, accountId) {
   if (!snap.exists) throw new Error(`Account ${accountId} not found`);
   const account = snap.data();
 
-  if (account.stripeCustomerId) return account.stripeCustomerId;
-
-  const customer = await stripe.customers.create({
-    name: account.name,
+  // Contact details live on the account doc and can be edited after the Stripe
+  // customer was first created. Push the current values to Stripe every time so
+  // an email added/changed later actually reaches Stripe — otherwise sending an
+  // invoice fails with "no email" even though the app shows one. Undefined keys
+  // are omitted by the Stripe SDK, so a blank field never clears existing data.
+  const contact = {
+    name: account.name || undefined,
     email: account.email || undefined,
     phone: account.phone || undefined,
+  };
+
+  if (account.stripeCustomerId) {
+    await stripe.customers.update(account.stripeCustomerId, contact);
+    return account.stripeCustomerId;
+  }
+
+  const customer = await stripe.customers.create({
+    ...contact,
     metadata: { accountId },
   });
 

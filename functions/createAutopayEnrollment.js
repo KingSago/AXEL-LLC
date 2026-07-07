@@ -10,6 +10,7 @@ const {
   accountRef,
   APP_BASE_URL,
   STRIPE_SECRET_KEY,
+  nextFirstOfMonthUnix,
 } = require("./lib/init");
 const { ensureCustomer } = require("./lib/customer");
 
@@ -39,6 +40,9 @@ module.exports = onCall(
       mode: "subscription",
       customer: customerId,
       payment_method_types: ["card", "us_bank_account"],
+      // Always capture the card, even though the first charge is deferred to
+      // the 1st via the trial below (otherwise Checkout may skip collection).
+      payment_method_collection: "always",
       line_items: [
         {
           quantity: 1,
@@ -50,7 +54,12 @@ module.exports = onCall(
           },
         },
       ],
-      subscription_data: { metadata: { accountId } },
+      // Save the card now; first charge lands on the upcoming 1st, then monthly
+      // on the 1st thereafter (trial_end anchors the billing cycle to that date).
+      subscription_data: {
+        metadata: { accountId },
+        trial_end: nextFirstOfMonthUnix(),
+      },
       metadata: { accountId },
       success_url: `${base}/?autopay=success&account=${accountId}`,
       cancel_url: `${base}/?autopay=cancel&account=${accountId}`,

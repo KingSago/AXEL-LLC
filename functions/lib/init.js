@@ -45,6 +45,20 @@ function assertAxel(request) {
 
 const accountRef = (accountId) => db.collection("accounts").doc(accountId);
 
+/**
+ * Unix timestamp for the 1st of the upcoming month (~8–9am ET), used to anchor
+ * monthly billing to the 1st. If the next 1st is under 48h away we skip to the
+ * following month so Stripe always gets a comfortably-future trial/anchor date.
+ */
+function nextFirstOfMonthUnix() {
+  const now = new Date();
+  let d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 13, 0, 0));
+  if (d.getTime() - now.getTime() < 2 * 24 * 3600 * 1000) {
+    d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 2, 1, 13, 0, 0));
+  }
+  return Math.floor(d.getTime() / 1000);
+}
+
 /** Resolve the local accountId for a Stripe customer id (fast Firestore lookup). */
 async function accountIdForCustomer(customerId) {
   if (!customerId) return null;
@@ -61,6 +75,7 @@ module.exports = {
   assertAxel,
   accountRef,
   accountIdForCustomer,
+  nextFirstOfMonthUnix,
   STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET,
   INBOUND_SHARED_SECRET,

@@ -37,6 +37,7 @@
       <div class="topbar__brand">Axel's Trusted LLC</div>
       <nav class="topbar__nav">
         <button data-nav="dashboard" class="topbar__link is-active">Dashboard</button>
+        <button data-nav="invoices" class="topbar__link">Invoices</button>
         <button data-nav="payments" class="topbar__link">Payments<span id="payments-badge" class="nav-badge hidden">0</span></button>
         <button data-nav="new-accounts" class="topbar__link">New Accounts<span id="new-accounts-badge" class="nav-badge hidden">0</span></button>
         <button data-nav="reports" class="topbar__link">Reports</button>
@@ -90,6 +91,24 @@
       <section id="account-view" class="view hidden">
         <button class="link-back" id="back-to-dash">&larr; Back</button>
         <div id="account-detail"></div>
+      </section>
+
+      <!-- Invoices -->
+      <section id="invoices-view" class="view hidden">
+        <div class="view__head"><h2>Invoices</h2></div>
+        <div class="list__controls">
+          <input type="search" id="invoice-search" placeholder="Search by customer…" />
+          <select id="invoice-sort">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="amount-desc">Amount (high→low)</option>
+            <option value="amount-asc">Amount (low→high)</option>
+            <option value="overdue">Overdue first</option>
+            <option value="account-az">Customer A–Z</option>
+          </select>
+        </div>
+        <div id="invoices-unpaid"></div>
+        <div id="invoices-paid"></div>
       </section>
 
       <!-- Payments review queue -->

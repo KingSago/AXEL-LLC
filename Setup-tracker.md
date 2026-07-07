@@ -214,6 +214,69 @@ In Axel's **everyday inbox** (where the bank + Venmo currently send alerts):
 
 ---
 
+## 7. Monthly auto-charge (bills on the 1st)
+
+Every account can be billed automatically on the **1st of each month**. Each
+account is set to **one** mode (the tracker keeps these mutually exclusive):
+
+**Charge a saved card/bank (no customer action after enrollment):**
+
+- **Monthly accounts** → **Enable Autopay** (unchanged flow) creates a Stripe
+  subscription. New subscriptions are anchored to the 1st; any pre-existing
+  Autopay subscriptions are moved to the 1st automatically the first time the
+  monthly job runs (a one-time free gap of up to one month, no double charge).
+- **Per-cut accounts** → **Enable Auto-charge** texts the customer a Stripe
+  "save your card/bank" link (Checkout in setup mode). Once saved, the monthly
+  job bills **all their un-billed cuts** on the 1st (variable amount). Skips
+  accounts with no un-billed cuts. A failed charge flags the account
+  ("Auto-charge failed") and leaves the invoice open for follow-up.
+
+**Email an invoice the customer pays themselves (no saved card):**
+
+- **Auto-invoice on the 1st** — a per-account toggle on either type. On the 1st
+  the job emails a Stripe invoice: **monthly** accounts get their fixed rate;
+  **per-cut** accounts get all their un-billed cuts. The customer pays via the
+  hosted link (card or bank). Needs an email on the account, nothing else — no
+  enrollment link, no saved card. Turn it on/off from the account screen.
+
+The engine for all of the above is the **`monthlyAutoCharge`** scheduled function
+(`functions/monthlyAutoCharge.js`), which runs at **08:00 America/New_York on the
+1st** (`0 8 1 * *`).
+
+**Setup:** nothing extra beyond a normal deploy.
+
+- Deploying an `onSchedule` function **auto-provisions a Cloud Scheduler job**
+  (Blaze plan required — already needed for Functions). Firebase enables the
+  Cloud Scheduler API on first deploy; approve it if prompted.
+- **No new Stripe webhook events** are required — setup-mode enrollment arrives
+  on the `checkout.session.completed` event, and auto-charges settle on
+  `invoice.paid` / `invoice.payment_failed`, all already subscribed in step 5.
+
+```powershell
+firebase deploy --only functions
+# confirm the schedule exists:
+gcloud scheduler jobs list --project YOUR-PROJECT
+```
+
+To change the day/time, edit the `schedule` / `timeZone` in
+`functions/monthlyAutoCharge.js` and redeploy.
+
+**Test it (Test mode):**
+
+1. On a **per-cut** account, click **Enable Auto-charge**, open the link, save a
+   Stripe **test card** (`4242 4242 4242 4242`). The account shows an
+   "Auto-charge" pill.
+2. Log a cut or two so there are un-billed charges.
+3. Force a run without waiting for the 1st:
+   ```powershell
+   gcloud scheduler jobs run firebase-schedule-monthlyAutoCharge-us-central1 --project YOUR-PROJECT
+   ```
+   (or **Cloud Scheduler → the job → Force run** in the console.)
+4. The cuts get billed on one Stripe invoice, charged automatically, and the
+   webhook posts the payment — the balance nets to zero and the invoice shows paid.
+
+---
+
 ## How it works (quick reference)
 
 | Action | What happens |
@@ -222,12 +285,15 @@ In Axel's **everyday inbox** (where the bank + Venmo currently send alerts):
 | **Log Cut** (monthly acct) | Records service history only; no charge (subscription is the bill). |
 | **Add Charge** | Extra one-off work; balance goes up. |
 | **Send Invoice** | Creates + emails a Stripe invoice for the selected un-billed charges (card/ACH). |
-| **Enable Autopay** (monthly) | Generates a Stripe enrollment link to text the customer; once they enter a card/bank, a monthly subscription auto-charges them. |
+| **Enable Autopay** (monthly) | Generates a Stripe enrollment link to text the customer; once they enter a card/bank, a monthly subscription auto-charges them **on the 1st**. |
+| **Enable Auto-charge** (per-cut) | Generates a Stripe "save your card/bank" link to text the customer; once saved, **all un-billed cuts are auto-charged on the 1st of each month** (variable amount). |
+| **Auto-invoice on the 1st** (either type) | Emails a Stripe invoice on the 1st that the customer pays via the link — **no saved card**. Monthly = the fixed rate; per-cut = all un-billed cuts. Mutually exclusive with the card auto-billing above. |
 | **Record Payment** | Logs a direct cash/check/Zelle payment not tied to an invoice. |
 | **Mark Paid** (on an open invoice) | Marks the Stripe invoice paid out-of-band (customer paid by cash/check/Zelle). |
 | Venmo/Zelle alert is forwarded | `inboundPayment` parses it, fuzzy-matches an account, and queues it on the **Payments** tab. |
 | **Confirm** (Payments tab) | Posts the queued payment to the chosen account (date = email date); learns the payer name as an alias. No balance change until confirmed. |
 | Stripe charges/pays an invoice | The webhook records the charge + payment automatically; dashboard updates. |
+| **Monthly auto-charge job** (1st, 8am ET) | Re-anchors monthly Autopay to the 1st (one-time each), then auto-charges every per-cut auto-charge account's un-billed cuts. |
 
 **Data lives in Firestore** under `accounts/{id}` with `charges`, `payments`,
 `invoices`, and `cuts` subcollections. Account rollups (`balance`, `totalPaid`, …)

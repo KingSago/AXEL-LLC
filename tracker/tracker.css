@@ -167,6 +167,15 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .pill.blue { background: #E2EEFB; color: #1B6FC2; }
 .pill-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 
+.invoice-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--light-gray); flex-wrap: wrap;
+}
+.invoice-row:last-child { border-bottom: 0; }
+.invoice-row__main { flex: 1; min-width: 0; }
+.invoice-row__name { font-weight: 600; font-size: 1.02rem; }
+.invoice-row__actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
 /* ---------- Nav badge ---------- */
 .nav-badge { display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px;
@@ -225,6 +234,13 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .ledger .amt { text-align: right; font-variant-numeric: tabular-nums; }
 .ledger .charge { color: var(--red); } .ledger .payment { color: var(--green); }
 .ledger th { font-size: .75rem; text-transform: uppercase; color: var(--gray); }
+.ledger__action { text-align: right; width: 34px; }
+.ledger__del {
+  border: none; background: none; cursor: pointer; padding: 2px 4px;
+  font-size: .95rem; line-height: 1; opacity: .5; border-radius: 6px;
+  transition: opacity .15s, background .15s;
+}
+.ledger__del:hover { opacity: 1; background: var(--red-bg); }
 
 .checks { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto; }
 .checks label { display: flex; align-items: center; gap: 8px; font-weight: 500; }
@@ -245,6 +261,20 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   .summary { grid-template-columns: repeat(2, 1fr); }
   .topbar__brand { font-size: 1rem; }
   .topbar__link { padding: 8px 9px; font-size: .82rem; }
+
+  /* Keep the topbar from overflowing the screen: brand + sign-out stay on
+     the top line, the nav tabs drop to their own full-width row that wraps. */
+  .topbar { flex-wrap: wrap; gap: 8px 12px; }
+  .topbar__brand   { order: 1; }
+  .topbar__signout { order: 2; margin-left: auto; }
+  .topbar__nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .topbar__link { flex: 1 1 auto; text-align: center; white-space: nowrap; }
   /* Move account list above charts so it's visible on load */
   #dashboard-view { display: flex; flex-direction: column; }
   #dashboard-view .chart-card { order: 10; }

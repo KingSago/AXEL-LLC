@@ -152,6 +152,8 @@ async function createAccount(data) {
     totalCharged: 0, totalPaid: 0, balance: 0,
     lastPaymentAt: null, lastCutAt: null,
     autopay: { status: "none" },
+    autoCharge: { status: "none" },
+    autoInvoice: { status: "none" },
     createdAt: serverTimestamp(),
   });
 }
@@ -180,6 +182,25 @@ async function addCharge(acc, { amount, description }) {
     const chargeRef = doc(collection(ref, "charges"));
     tx.set(chargeRef, { type: "extra", amount: amt, description, date: today(), createdAt: serverTimestamp() });
     tx.set(ref, { totalCharged: increment(amt), balance: increment(amt) }, { merge: true });
+  });
+}
+
+// Delete a charge Axel entered by mistake (wrong amount, wrong account, etc.)
+// and reverse it out of the account's running totals. Charges already sent on a
+// Stripe invoice are refused — voiding those has to happen in Stripe so the
+// books stay in sync with the invoice the customer actually received.
+async function deleteCharge(acc, charge) {
+  const accRef = doc(db, "accounts", acc.id);
+  await runTransaction(db, async (tx) => {
+    const chargeRef = doc(collection(accRef, "charges"), charge.id);
+    const snap = await tx.get(chargeRef);
+    if (!snap.exists()) throw new Error("This charge was already removed.");
+    if (snap.data().invoiceId) {
+      throw new Error("This charge is on an invoice — void the invoice in Stripe first.");
+    }
+    const amt = Number(snap.data().amount || 0);
+    tx.delete(chargeRef);
+    tx.set(accRef, { totalCharged: increment(-amt), balance: increment(-amt) }, { merge: true });
   });
 }
 
@@ -258,17 +279,131 @@ $("#quick-pay-btn").addEventListener("click", quickPayModal);
 
 function show(view) {
   currentView = view;
-  for (const v of ["dashboard", "account", "payments", "new-accounts", "reports", "settings"]) {
+  for (const v of ["dashboard", "account", "invoices", "payments", "new-accounts", "reports", "settings"]) {
     $(`#${v}-view`).classList.toggle("hidden", v !== view);
   }
   document.querySelectorAll("[data-nav]").forEach((b) =>
     b.classList.toggle("is-active", b.dataset.nav === view));
   if (view === "dashboard") renderDashboard();
+  if (view === "invoices") renderInvoices();
   if (view === "payments") renderPayments();
   if (view === "new-accounts") renderNewAccounts();
   if (view === "reports") renderReports();
   if (view === "settings") renderSettings();
 }
+
+/* ============================================================
+   INVOICES (app-wide list: unpaid vs paid, resend + mark paid)
+   ============================================================ */
+let invoiceSort = "newest";
+const DUE_TERM_DAYS = 7; // fallback term for invoices issued before dueDate was stored
+
+// Effective due date (ms). Uses the stored dueDate, else dateIssued + 7 days.
+function invoiceDueMs(inv) {
+  if (inv.dueDate) return new Date(inv.dueDate).getTime();
+  const issued = tsMs(inv.dateIssued) || tsMs(inv.createdAt);
+  return issued ? issued + DUE_TERM_DAYS * 86400000 : 0;
+}
+function isOverdue(inv) {
+  return inv.status === "open" && invoiceDueMs(inv) > 0 && invoiceDueMs(inv) < Date.now();
+}
+function issuedDateStr(inv) {
+  const ms = tsMs(inv.dateIssued) || tsMs(inv.createdAt);
+  return ms ? new Date(ms).toISOString().slice(0, 10) : "";
+}
+
+function sortInvoices(list, key) {
+  const copy = [...list];
+  switch (key) {
+    case "oldest":      return copy.sort((a, b) => tsMs(a.createdAt) - tsMs(b.createdAt));
+    case "amount-desc": return copy.sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
+    case "amount-asc":  return copy.sort((a, b) => Number(a.total || 0) - Number(b.total || 0));
+    case "overdue":     return copy.sort((a, b) => invoiceDueMs(a) - invoiceDueMs(b));
+    case "account-az":  return copy.sort((a, b) => (a.customerName || "").localeCompare(b.customerName || ""));
+    default:            return copy.sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt)); // newest
+  }
+}
+
+async function renderInvoices() {
+  const unpaidHost = $("#invoices-unpaid");
+  const paidHost = $("#invoices-paid");
+  unpaidHost.replaceChildren(el("p", { class: "card" }, "Loading invoices…"));
+  paidHost.replaceChildren();
+
+  let invoices;
+  try {
+    const snap = await getDocs(query(collectionGroup(db, "invoices"), orderBy("createdAt", "desc")));
+    const nameFor = new Map(accounts.map((a) => [a.id, a.name || "Account"]));
+    invoices = snap.docs.map((d) => {
+      const accountId = d.ref.parent.parent.id;
+      return { id: d.id, accountId, customerName: nameFor.get(accountId) || "Account", ...d.data() };
+    });
+  } catch (err) {
+    unpaidHost.replaceChildren(el("p", { class: "card" }, "Could not load invoices: " + err.message));
+    return;
+  }
+
+  const term = ($("#invoice-search").value || "").toLowerCase();
+  const filtered = term
+    ? invoices.filter((i) => (i.customerName || "").toLowerCase().includes(term))
+    : invoices;
+  const sorted = sortInvoices(filtered, invoiceSort);
+
+  const unpaid = sorted.filter((i) => i.status === "open");
+  const paid = sorted.filter((i) => i.status === "paid");
+
+  unpaidHost.replaceChildren(invoiceSection(`Unpaid (${unpaid.length})`, unpaid, "No unpaid invoices."));
+  paidHost.replaceChildren(invoiceSection(`Paid (${paid.length})`, paid, "No paid invoices yet."));
+}
+
+function invoiceSection(title, list, emptyMsg) {
+  const card = el("div", { class: "card" }, el("h3", {}, title));
+  if (!list.length) { card.append(el("p", { class: "acct-row__meta" }, emptyMsg)); return card; }
+  list.forEach((inv) => card.append(invoiceRow(inv)));
+  return card;
+}
+
+function invoiceRow(inv) {
+  const a = accounts.find((x) => x.id === inv.accountId);
+  const overdue = isOverdue(inv);
+  const pill = inv.status === "paid"
+    ? el("span", { class: "pill green" }, "Paid")
+    : overdue
+      ? el("span", { class: "pill red" }, "Overdue")
+      : el("span", { class: "pill amber" }, "Open");
+
+  const meta = [inv.number || "invoice", issuedDateStr(inv) && "Issued " + issuedDateStr(inv), fmt(inv.total)]
+    .filter(Boolean).join(" · ");
+
+  const actions = el("div", { class: "invoice-row__actions" });
+  if (inv.hostedInvoiceUrl) {
+    actions.append(el("a", { href: inv.hostedInvoiceUrl, target: "_blank", class: "btn btn-outline btn-sm" },
+      inv.status === "paid" ? "Receipt" : "View"));
+  }
+  if (inv.status === "open" && a) {
+    actions.append(el("button", { class: "btn btn-primary btn-sm", onclick: () => resendInvoiceModal(a, inv) }, "Resend"));
+    actions.append(el("button", { class: "btn btn-green btn-sm", onclick: () => markPaidModal(a, inv) }, "Mark paid"));
+  }
+
+  return el("div", { class: "invoice-row" },
+    el("div", { class: "invoice-row__main" },
+      el("div", { class: "invoice-row__name" }, inv.customerName || "Account"),
+      el("div", { class: "acct-row__meta" }, meta),
+      el("div", { class: "pill-row" }, pill)),
+    actions);
+}
+
+function resendInvoiceModal(a, inv) {
+  const body = el("div", {},
+    el("p", {}, `Re-email invoice ${inv.number || ""} (${fmt(inv.total)}) to ${a.name}? Stripe sends the same invoice and pay link again — no new invoice or charge is created.`));
+  modal({ title: "Resend Invoice", body, submitLabel: "Resend", onSubmit: async () => {
+    await call("resendInvoice")({ accountId: a.id, invoiceId: inv.id });
+    toast("Invoice re-sent");
+  } });
+}
+
+$("#invoice-search").addEventListener("input", renderInvoices);
+$("#invoice-sort").addEventListener("change", (e) => { invoiceSort = e.target.value; renderInvoices(); });
 
 /* ============================================================
    PAYMENTS QUEUE (forwarded Zelle/Venmo alerts to review)
@@ -541,7 +676,11 @@ async function renderDashboard() {
   const active = accounts.filter((a) => a.active !== false);
   const outstanding = active.reduce((s, a) => s + Math.max(0, Number(a.balance || 0)), 0);
   const overdue = active.filter((a) => Number(a.balance || 0) > 0.005).length;
-  const autopay = active.filter((a) => a.autopay?.status === "active").length;
+  const autoBilling = active.filter(
+    (a) => a.autopay?.status === "active"
+      || a.autoCharge?.status === "active"
+      || a.autoInvoice?.status === "active",
+  ).length;
 
   const collected = await collectedThisMonth();
 
@@ -549,7 +688,7 @@ async function renderDashboard() {
     sumCard("Total Outstanding", fmt(outstanding), outstanding > 0 ? "red" : "green"),
     sumCard("Collected This Month", fmt(collected), "green"),
     sumCard("Accounts Overdue", String(overdue), overdue ? "amber" : ""),
-    sumCard("Active Autopay", String(autopay), ""),
+    sumCard("Auto-billing", String(autoBilling), ""),
   );
 
   renderIncomeChart();
@@ -581,6 +720,10 @@ function accountRow(a) {
   if (a.autopay?.status === "active") pills.append(el("span", { class: "pill green" }, "Autopay"));
   if (a.autopay?.status === "pending") pills.append(el("span", { class: "pill amber" }, "Autopay pending"));
   if (a.autopay?.status === "failed") pills.append(el("span", { class: "pill red" }, "Payment failed"));
+  if (a.autoCharge?.status === "active") pills.append(el("span", { class: "pill green" }, "Auto-charge"));
+  if (a.autoCharge?.status === "pending") pills.append(el("span", { class: "pill amber" }, "Auto-charge pending"));
+  if (a.autoCharge?.status === "failed") pills.append(el("span", { class: "pill red" }, "Auto-charge failed"));
+  if (a.autoInvoice?.status === "active") pills.append(el("span", { class: "pill blue" }, "Auto-invoice"));
 
   const mowerBtn = el("button", { class: "acct-row__mower", title: "Log cut",
     onclick: (e) => { e.stopPropagation(); confirmLogCut(a); } });
@@ -776,11 +919,24 @@ async function renderAccountDetail(id) {
   if (a.billingType === "percut" || unbilled.length) {
     actions.append(el("button", { class: "btn btn-primary", onclick: () => sendInvoiceModal(a, unbilled) }, "Send Invoice"));
   }
+  if (a.billingType === "percut") {
+    if (a.autoCharge?.status === "active" || a.autoCharge?.status === "failed") {
+      actions.append(el("button", { class: "btn btn-outline", onclick: () => cancelAutoChargeConfirm(a) }, "Cancel Auto-charge"));
+    } else if (a.autoInvoice?.status === "active") {
+      actions.append(el("button", { class: "btn btn-outline", onclick: () => disableAutoInvoiceConfirm(a) }, "Turn off Auto-invoice"));
+    } else {
+      actions.append(el("button", { class: "btn btn-primary", onclick: () => enableAutoCharge(a) }, "Enable Auto-charge"));
+      actions.append(el("button", { class: "btn btn-outline", onclick: () => enableAutoInvoice(a) }, "Auto-invoice on the 1st"));
+    }
+  }
   if (a.billingType === "monthly") {
     if (a.autopay?.status === "active" || a.autopay?.status === "failed") {
       actions.append(el("button", { class: "btn btn-outline", onclick: () => cancelAutopayConfirm(a) }, "Cancel Autopay"));
+    } else if (a.autoInvoice?.status === "active") {
+      actions.append(el("button", { class: "btn btn-outline", onclick: () => disableAutoInvoiceConfirm(a) }, "Turn off Auto-invoice"));
     } else {
       actions.append(el("button", { class: "btn btn-primary", onclick: () => enableAutopay(a) }, "Enable Autopay"));
+      actions.append(el("button", { class: "btn btn-outline", onclick: () => enableAutoInvoice(a) }, "Auto-invoice on the 1st"));
     }
   }
   wrap.append(actions);
@@ -802,6 +958,7 @@ async function renderAccountDetail(id) {
         el("span", {}, `${fmt(inv.total)} · ${inv.number || "invoice"}`),
         el("span", {},
           inv.hostedInvoiceUrl ? el("a", { href: inv.hostedInvoiceUrl, target: "_blank", class: "btn btn-outline btn-sm" }, "View") : "",
+          el("button", { class: "btn btn-primary btn-sm", onclick: () => resendInvoiceModal(a, inv) }, "Resend"),
           el("button", { class: "btn btn-green btn-sm", onclick: () => markPaidModal(a, inv) }, "Mark paid"))));
     });
     wrap.append(card);
@@ -810,15 +967,22 @@ async function renderAccountDetail(id) {
   // ledger
   const entries = [...charges, ...payments].sort((x, y) => (y.date || "").localeCompare(x.date || ""));
   const table = el("table", { class: "ledger" },
-    el("tr", {}, el("th", {}, "Date"), el("th", {}, "Description"), el("th", { class: "amt" }, "Amount")));
+    el("tr", {}, el("th", {}, "Date"), el("th", {}, "Description"), el("th", { class: "amt" }, "Amount"), el("th", {})));
   entries.forEach((e) => {
     const isCharge = e.kind === "charge";
+    const actionCell = el("td", { class: "ledger__action" });
+    if (isCharge) {
+      const del = el("button", { class: "ledger__del", type: "button", title: "Delete charge",
+        onclick: () => deleteChargeModal(a, e, invoices) }, "🗑");
+      actionCell.append(del);
+    }
     table.append(el("tr", {},
       el("td", {}, e.date || ""),
       el("td", {}, isCharge ? (e.description || labelCharge(e)) : ("Payment · " + (METHOD_LABEL[e.method] || e.method))),
-      el("td", { class: "amt " + (isCharge ? "charge" : "payment") }, (isCharge ? "" : "−") + fmt(e.amount))));
+      el("td", { class: "amt " + (isCharge ? "charge" : "payment") }, (isCharge ? "" : "−") + fmt(e.amount)),
+      actionCell));
   });
-  if (!entries.length) table.append(el("tr", {}, el("td", { colspan: "3" }, "No activity yet.")));
+  if (!entries.length) table.append(el("tr", {}, el("td", { colspan: "4" }, "No activity yet.")));
   wrap.append(el("div", { class: "card" }, el("h3", {}, "Ledger"), table));
 
   // mow history
@@ -971,6 +1135,54 @@ function cancelAutopayConfirm(a) {
   } });
 }
 
+async function enableAutoCharge(a) {
+  toast("Creating secure card-on-file link…");
+  try {
+    const res = await call("createCardOnFileEnrollment")({ accountId: a.id });
+    const url = res.data?.url;
+    const linkInput = el("input", { value: url, readonly: "", onclick: (e) => e.target.select() });
+    const body = el("div", {},
+      el("p", {}, "Send this secure link to the customer. They save a card or bank once, then all un-billed cuts are charged automatically on the 1st of each month."),
+      el("label", {}, "Card-on-file link", linkInput));
+    modal({ title: "Auto-charge Enrollment", body, submitLabel: "Copy & open", onSubmit: async () => {
+      try { await navigator.clipboard.writeText(url); } catch {}
+      window.open(url, "_blank");
+    } });
+  } catch (err) { toast(err.message || "Could not start enrollment", true); }
+}
+
+function cancelAutoChargeConfirm(a) {
+  const body = el("div", {}, el("p", {}, `Turn off auto-charge for ${a.name}? Their saved card is removed and monthly cuts won't be charged automatically.`));
+  modal({ title: "Cancel Auto-charge", body, submitLabel: "Turn off auto-charge", onSubmit: async () => {
+    await call("cancelCardOnFile")({ accountId: a.id });
+    toast("Auto-charge turned off"); setTimeout(() => renderAccountDetail(a.id), 600);
+  } });
+}
+
+function enableAutoInvoice(a) {
+  if (!(a.email || "").trim()) {
+    toast("Add the customer's email first — invoices are emailed to them.", true);
+    return;
+  }
+  const what = a.billingType === "monthly"
+    ? `${fmt(a.rate)} will be emailed as an invoice on the 1st of each month.`
+    : "All un-billed cuts will be emailed as one invoice on the 1st of each month.";
+  const body = el("div", {},
+    el("p", {}, `Turn on Auto-invoice for ${a.name}? ${what} The customer pays via the link — no saved card needed.`));
+  modal({ title: "Enable Auto-invoice", body, submitLabel: "Turn on Auto-invoice", onSubmit: async () => {
+    await updateDoc(doc(db, "accounts", a.id), { "autoInvoice.status": "active" });
+    toast("Auto-invoice on"); setTimeout(() => renderAccountDetail(a.id), 400);
+  } });
+}
+
+function disableAutoInvoiceConfirm(a) {
+  const body = el("div", {}, el("p", {}, `Turn off Auto-invoice for ${a.name}? No invoices will be emailed automatically.`));
+  modal({ title: "Turn off Auto-invoice", body, submitLabel: "Turn off", onSubmit: async () => {
+    await updateDoc(doc(db, "accounts", a.id), { "autoInvoice.status": "none" });
+    toast("Auto-invoice off"); setTimeout(() => renderAccountDetail(a.id), 400);
+  } });
+}
+
 async function undoCutModal(acc, lastCutCharge) {
   if (acc.billingType === "monthly") {
     const accRef = doc(db, "accounts", acc.id);
@@ -1024,6 +1236,28 @@ function undoPaymentModal(acc, lastPayment, prevPayment) {
       }, { merge: true });
     });
     toast("Payment removed");
+    renderAccountDetail(acc.id);
+  }});
+}
+
+function deleteChargeModal(acc, charge, invoices = []) {
+  // A charge that's already on an invoice can't be safely deleted here — the
+  // customer has the Stripe invoice, so it has to be voided in Stripe first.
+  if (charge.invoiceId) {
+    const inv = invoices.find((i) => i.id === charge.invoiceId);
+    const label = inv?.number ? `invoice ${inv.number}` : "an invoice";
+    toast(`This charge is on ${label}. Void that invoice in Stripe first.`, true);
+    return;
+  }
+  const amount = Number(charge.amount || 0);
+  const desc = charge.description || labelCharge(charge);
+  const body = el("div", {},
+    el("p", { style: "font-weight:600;margin-bottom:6px" }, "Delete this charge?"),
+    el("p", { class: "acct-row__meta" }, `${fmtDate(charge.date)} · ${desc} · ${fmt(amount)}`),
+    el("p", { class: "acct-row__meta" }, `${fmt(amount)} will be removed from the balance. This can't be undone.`));
+  modal({ title: "Delete Charge", body, submitLabel: "Delete", onSubmit: async () => {
+    await deleteCharge(acc, charge);
+    toast("Charge deleted");
     renderAccountDetail(acc.id);
   }});
 }

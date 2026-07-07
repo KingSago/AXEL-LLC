@@ -66,6 +66,7 @@ module.exports = onRequest(
 /* ---------- handlers ---------- */
 
 async function onCheckoutCompleted(stripe, session) {
+  if (session.mode === "setup") return onSetupCompleted(stripe, session);
   if (session.mode !== "subscription") return;
   const accountId = session.metadata?.accountId;
   if (!accountId) return;
@@ -86,8 +87,55 @@ async function onCheckoutCompleted(stripe, session) {
         status: "active",
         stripeSubscriptionId: session.subscription,
         methodType,
+        // New subscriptions are created anchored to the 1st, so the monthly
+        // re-anchor job should skip them.
+        billingAnchor: "first",
         lastFailureAt: null,
         checkoutSessionId: null,
+      },
+    },
+    { merge: true }
+  );
+}
+
+// A per-cut customer finished the SETUP-mode Checkout: save the captured
+// payment method as their default so the monthly job can charge it.
+async function onSetupCompleted(stripe, session) {
+  const accountId = session.metadata?.accountId;
+  if (!accountId || !session.setup_intent) return;
+
+  let pmId = null;
+  try {
+    const si = await stripe.setupIntents.retrieve(session.setup_intent);
+    pmId = si.payment_method;
+  } catch (_) {
+    /* fall through — nothing saved, leave the account pending */
+  }
+  if (!pmId) return;
+
+  let methodType = null;
+  try {
+    const pm = await stripe.paymentMethods.retrieve(pmId);
+    methodType = methodFromPM(pm);
+  } catch (_) {
+    /* leave null */
+  }
+
+  // Make it the customer's default so charge_automatically invoices use it.
+  if (session.customer) {
+    await stripe.customers.update(session.customer, {
+      invoice_settings: { default_payment_method: pmId },
+    });
+  }
+
+  await accountRef(accountId).set(
+    {
+      autoCharge: {
+        status: "active",
+        defaultPaymentMethodId: pmId,
+        methodType,
+        setupCheckoutSessionId: null,
+        lastFailureAt: null,
       },
     },
     { merge: true }
@@ -153,6 +201,12 @@ async function onInvoicePaid(stripe, invoice) {
       { autopay: { status: "active", lastFailureAt: null, methodType: method } },
       { merge: true }
     );
+  } else if (invoice.collection_method === "charge_automatically") {
+    // A successful per-cut auto-charge clears any prior failed flag.
+    await accountRef(accountId).set(
+      { autoCharge: { status: "active", lastFailureAt: null, methodType: method } },
+      { merge: true }
+    );
   }
 }
 
@@ -175,6 +229,16 @@ async function onInvoiceFailed(invoice) {
     });
     await accountRef(accountId).set(
       { autopay: { status: "failed", lastFailureAt: FieldValue.serverTimestamp() } },
+      { merge: true }
+    );
+    return;
+  }
+
+  // A per-cut auto-charge invoice failed to collect off-session. Flag it so
+  // Axel can follow up; the invoice stays open for a retry or manual payment.
+  if (invoice.collection_method === "charge_automatically") {
+    await accountRef(accountId).set(
+      { autoCharge: { status: "failed", lastFailureAt: FieldValue.serverTimestamp() } },
       { merge: true }
     );
   }
